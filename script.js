@@ -98,7 +98,7 @@ int main() {
 }
 \`\`\`
 
-> Add new \`\`\`python or \`\`\`cpp blocks — the highlighting is applied automatically.
+> Add new python or cpp blocks — the highlighting is applied automatically.
 `;
 
 const DEMO_PY = `class Greeter:
@@ -179,15 +179,36 @@ print(f"Final result, received from the C++ block: {total}")
 \`\`\`
 `;
 
+const DEMO_FILES = [
+  { id: 'f1', name: 'calculator.md', content: DEMO_CALC },
+  { id: 'f2', name: 'note.md', content: DEMO_CONTENT },
+  { id: 'f3', name: 'hello.py', content: DEMO_PY },
+  { id: 'f4', name: 'hello.cpp', content: DEMO_CPP }
+];
+
 let state = {
-  files: [
-    { id: 'f1', name: 'calculator.md', content: DEMO_CALC },
-    { id: 'f2', name: 'note.md', content: DEMO_CONTENT },
-    { id: 'f3', name: 'hello.py', content: DEMO_PY },
-    { id: 'f4', name: 'hello.cpp', content: DEMO_CPP }
-  ],
+  files: DEMO_FILES.map(f => ({ ...f })),
   activeId: 'f1'
 };
+
+/* Replaces the demo files with their original content (matched by id).
+   Other files the user created are kept. Needed because saved data in
+   localStorage is not updated automatically when the demo files change. */
+function restoreDemoFiles() {
+  if (!confirm('Restore the demo files to their original content? Your other files are kept.')) return;
+  DEMO_FILES.forEach(demo => {
+    const existing = state.files.find(f => f.id === demo.id);
+    if (existing) {
+      existing.name = demo.name;
+      existing.content = demo.content;
+    } else {
+      state.files.push({ ...demo });
+    }
+  });
+  if (!state.files.some(f => f.id === state.activeId)) state.activeId = state.files[0].id;
+  renderAll();
+  saveState();
+}
 
 function loadState() {
   try {
@@ -385,6 +406,7 @@ contextMenu.addEventListener('click', (e) => {
     case 'export': exportFile(fileId); break;
     case 'import': importFile(); break;
     case 'delete': deleteFile(fileId); break;
+    case 'restore': restoreDemoFiles(); break;
   }
 });
 
