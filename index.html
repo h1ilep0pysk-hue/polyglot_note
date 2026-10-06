@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Polyglot — Markdown Notebook</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+<!-- Python and C++ interpreters are loaded lazily, only on the first "Run" —
+     see getPyodide() / getJSCPP() in script.js -->
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="titlebar">
+  <div class="titlebar-left">
+    <span class="dot"></span>
+    <span class="app-name">Poly Notebook</span>
+  </div>
+  <input type="file" id="importInput" accept=".md,.markdown,.txt" hidden>
+</div>
+
+<div class="titlebar-tabs" id="tabsbar">
+  <!-- file tabs are rendered by JS -->
+</div>
+
+<div class="context-menu" id="contextMenu">
+  <button data-action="rename">Rename</button>
+  <button data-action="export">Export</button>
+  <button data-action="import">Import…</button>
+  <div class="context-menu-sep"></div>
+  <button data-action="delete" class="danger">Delete file</button>
+</div>
+
+<main>
+  <section class="pane pane-editor">
+    <div class="pane-head">
+      <span class="pane-head-label">SOURCE</span>
+      <span class="pane-head-filename" id="activeFileName"></span>
+      <span class="pane-head-hint" id="cursorInfo">Ln 1, Col 1</span>
+    </div>
+    <div class="editor-wrap">
+      <div class="gutter" id="gutter"></div>
+      <textarea id="editor" spellcheck="false" wrap="off"></textarea>
+    </div>
+  </section>
+
+  <div class="resizer" id="resizer" title="Drag to resize"></div>
+
+  <section class="pane pane-preview">
+    <div class="pane-head">
+      <span class="pane-head-label" id="outputLabel">PREVIEW</span>
+      <div class="view-toggle" id="viewToggle" hidden>
+        <button data-mode="preview" class="view-toggle-btn">Preview</button>
+        <button data-mode="output" class="view-toggle-btn">Output</button>
+      </div>
+      <div class="output-controls" id="outputControls" hidden>
+        <button id="btnRun" class="run-btn" title="Run file">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l10-5.5-10-5.5z"/></svg>
+          Run
+        </button>
+        <button id="btnClear" class="clear-btn" title="Clear output">Clear</button>
+      </div>
+      <span class="pane-head-hint" id="outputHint">Markdown · Python · C++</span>
+    </div>
+    <div id="preview"></div>
+    <div id="console" class="console" hidden></div>
+  </section>
+</main>
+
+<footer class="statusbar">
+  <span class="status-item"><span class="status-dot"></span> Ready</span>
+  <span class="status-item" id="charCount">0 characters</span>
+  <span class="status-sep"></span>
+  <span class="status-item">UTF-8</span>
+  <span class="status-item">Markdown</span>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
