@@ -144,9 +144,6 @@ localStorage.removeItem('polyglot-notebook-state'); location.reload();
 This deletes all of your files in this browser. Export anything you need first.
 
 ## Known issues
-
-- The `note.md` demo has a line in a blockquote that contains literal triple
-  backticks (```python). The Markdown preview shows that line incorrectly.
   Running the file is not affected. Fix: write `python` and `cpp` without backticks in that line.
 - Existing `localStorage` data is not updated automatically when the demo
   files change. See *Persistence and resetting*.
