@@ -1,4 +1,4 @@
-# Polyglot Notebook
+# Poly Notebook
 
 A single-page, browser-only Markdown editor that can also run Python and C++
 code blocks. Everything runs in the browser: there is no backend and no build step.
