@@ -21,6 +21,17 @@ const resizer = document.getElementById('resizer');
 const editorPane = document.querySelector('.pane-editor');
 const mainEl = document.querySelector('main');
 
+const btnSettings = document.getElementById('btnSettings');
+const settingsPanel = document.getElementById('settingsPanel');
+const themePhotoInput = document.getElementById('themePhotoInput');
+const btnChoosePhoto = document.getElementById('btnChoosePhoto');
+const btnRemovePhoto = document.getElementById('btnRemovePhoto');
+const photoThumb = document.getElementById('photoThumb');
+const colorGrid = document.getElementById('colorGrid');
+const customColor = document.getElementById('customColor');
+const bgPhotoEl = document.getElementById('bgPhoto');
+const bgOverlayEl = document.getElementById('bgOverlay');
+
 /* ---------- Markdown + code highlighting ---------- */
 
 const renderer = new marked.Renderer();
@@ -54,7 +65,7 @@ const DEMO_CONTENT = `# Multi-language note
 
 This is regular **Markdown**: lists, *italic* and \`inline code\`.
 
-## How to use this .md file
+## How to use this .mult file
 
 **How to write.** Write text in regular Markdown. Put code in blocks:
 three backticks, then the language name (\`python\` or \`cpp\`), the code, and three closing backticks.
@@ -132,7 +143,28 @@ int main() {
 }
 `;
 
-const DEMO_CALC = `# Calculator: Python + C++ in one file
+const DEMO_C = `#include <stdio.h>
+
+int value = 0;
+
+void increment() {
+    value++;
+}
+
+int main() {
+    int nums[3] = {1, 2, 3};
+    for (int i = 0; i < 3; i++) {
+        if (nums[i] % 2 == 0) {
+            increment();
+        }
+        printf("%d\\n", nums[i]);
+    }
+    printf("even count: %d\\n", value);
+    return 0;
+}
+`;
+
+const DEMO_CALC = `# Calculator: Python + C++ + C in one file
 
 This is a single script: the blocks below run in order, as one program.
 To pass a value from one block to the next:
@@ -171,19 +203,26 @@ int main() {
 }
 \`\`\`
 
-## Step 3 — Python again, print the result
+## Step 3 — a third language, C, to finish the job
 
-\`\`\`python
-total = {{total}}
-print(f"Final result, received from the C++ block: {total}")
+\`\`\`c
+#include <stdio.h>
+
+int main() {
+    double total = {{total}};
+    printf("C received from C++: %.0f\\n", total);
+    printf("C doubled it again: %.0f\\n", total * 2);
+    return 0;
+}
 \`\`\`
 `;
 
 const DEMO_FILES = [
-  { id: 'f1', name: 'calculator.md', content: DEMO_CALC },
-  { id: 'f2', name: 'note.md', content: DEMO_CONTENT },
+  { id: 'f1', name: 'calculator.mult', content: DEMO_CALC },
+  { id: 'f2', name: 'note.mult', content: DEMO_CONTENT },
   { id: 'f3', name: 'hello.py', content: DEMO_PY },
-  { id: 'f4', name: 'hello.cpp', content: DEMO_CPP }
+  { id: 'f4', name: 'hello.cpp', content: DEMO_CPP },
+  { id: 'f5', name: 'hello.c', content: DEMO_C }
 ];
 
 let state = {
@@ -241,13 +280,14 @@ function activeFile() {
 function fileKind(name) {
   const ext = (name.split('.').pop() || '').toLowerCase();
   if (ext === 'py') return 'python';
+  if (ext === 'c') return 'c';
   if (['cpp', 'cc', 'cxx', 'h', 'hpp'].includes(ext)) return 'cpp';
-  return 'markdown';
+  return 'markdown'; // includes .mult (this app's notebook extension) and plain .md
 }
 
 /* Console output is stored per file, in memory (not in localStorage) */
 const consoleLogs = {}; // fileId -> [{type, text}]
-const viewModes = {};   // fileId -> 'preview' | 'output' (for .md files with code)
+const viewModes = {};   // fileId -> 'preview' | 'output' (for .mult files with code)
 
 function getLog(fileId) {
   if (!consoleLogs[fileId]) consoleLogs[fileId] = [];
@@ -261,7 +301,7 @@ function setViewMode(fileId, mode) {
   viewModes[fileId] = mode;
 }
 
-/* ---------- Extract ```python / ```cpp blocks from one .md file ---------- */
+/* ---------- Extract ```python / ```cpp / ```c blocks from one .mult file ---------- */
 
 function extractBlocks(content) {
   const blocks = [];
@@ -274,7 +314,7 @@ function extractBlocks(content) {
 }
 
 function hasRunnableBlocks(content) {
-  return extractBlocks(content).some(b => b.lang === 'python' || b.lang === 'cpp');
+  return extractBlocks(content).some(b => b.lang === 'python' || b.lang === 'cpp' || b.lang === 'c');
 }
 
 /* replaces {{name}} with values exported by earlier blocks */
@@ -316,10 +356,10 @@ function uid() {
   return 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
-function ensureMarkdownExt(name) {
+function ensureMultExt(name) {
   name = (name || '').trim();
-  if (!name) return 'untitled.md';
-  if (!/\.[a-zA-Z0-9]+$/.test(name)) return name + '.md';
+  if (!name) return 'untitled.mult';
+  if (!/\.[a-zA-Z0-9]+$/.test(name)) return name + '.mult';
   return name;
 }
 
@@ -420,13 +460,13 @@ function renderOutputPane() {
   const file = activeFile();
   const kind = fileKind(file.name);
 
-  if (kind === 'python' || kind === 'cpp') {
+  if (kind === 'python' || kind === 'cpp' || kind === 'c') {
     preview.hidden = true;
     consoleEl.hidden = false;
     outputControls.hidden = false;
     viewToggle.hidden = true;
     outputLabel.textContent = 'OUTPUT';
-    outputHint.textContent = kind === 'python' ? 'Python (Pyodide)' : 'C++ (JSCPP)';
+    outputHint.textContent = kind === 'python' ? 'Python (Pyodide)' : kind === 'c' ? 'C (JSCPP)' : 'C++ (JSCPP)';
     renderConsole();
     return;
   }
@@ -445,11 +485,11 @@ function renderOutputPane() {
     return;
   }
 
-  // a .md file with mixed ```python / ```cpp blocks —
+  // a .mult file with mixed ```python / ```cpp blocks —
   // both the preview and running the whole file are available
   outputControls.hidden = false;
   viewToggle.hidden = false;
-  outputHint.textContent = 'Python + C++ in one .md';
+  outputHint.textContent = 'Python + C + C++ in one .mult';
 
   const mode = getViewMode(file.id);
   viewToggle.querySelectorAll('.view-toggle-btn').forEach(btn => {
@@ -577,7 +617,7 @@ async function runActiveFile() {
       appendConsole(file.id, 'info', `▶ Running ${file.name}…`);
       await runPythonBlock(file.id, file.content, {});
       appendConsole(file.id, 'info', '— execution finished —');
-    } else if (kind === 'cpp') {
+    } else if (kind === 'cpp' || kind === 'c') {
       appendConsole(file.id, 'info', `▶ Running ${file.name}…`);
       await runCppBlock(file.id, file.content, {});
       appendConsole(file.id, 'info', '— execution finished —');
@@ -592,18 +632,18 @@ async function runActiveFile() {
   }
 }
 
-/* Runs one .md file as a single program: ```python / ```cpp blocks run in order,
+/* Runs one .mult file as a single program: ```python / ```cpp blocks run in order,
    values are passed through the bridge (@@export in one block's output ->
    {{name}} in the next block's code). */
 async function runNotebook(file) {
   const blocks = extractBlocks(file.content);
   const bridge = {};
 
-  appendConsole(file.id, 'info', `▶ Running .md file ${file.name} (${blocks.length} block(s))…`);
+  appendConsole(file.id, 'info', `▶ Running .mult file ${file.name} (${blocks.length} block(s))…`);
 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
-    if (block.lang !== 'python' && block.lang !== 'cpp') continue;
+    if (block.lang !== 'python' && block.lang !== 'cpp' && block.lang !== 'c') continue;
 
     appendConsole(file.id, 'info', `— Block ${i + 1}: ${block.lang} —`);
     const code = substituteBridge(block.code, bridge);
@@ -615,7 +655,7 @@ async function runNotebook(file) {
     }
   }
 
-  appendConsole(file.id, 'info', '— .md file finished —');
+  appendConsole(file.id, 'info', '— .mult file finished —');
 }
 
 async function runPythonBlock(fileId, code, bridge) {
@@ -718,7 +758,7 @@ function switchFile(id) {
 }
 
 function newFile() {
-  const name = ensureMarkdownExt(prompt('New file name:', 'note-' + (state.files.length + 1) + '.md'));
+  const name = ensureMultExt(prompt('New file name:', 'note-' + (state.files.length + 1) + '.mult'));
   if (name === null) return;
   const file = { id: uid(), name, content: '' };
   state.files.push(file);
@@ -730,7 +770,7 @@ function newFile() {
 
 function renameFile(fileId) {
   const file = state.files.find(f => f.id === fileId) || activeFile();
-  const name = ensureMarkdownExt(prompt('New file name:', file.name));
+  const name = ensureMultExt(prompt('New file name:', file.name));
   if (name === null) return;
   file.name = name;
   renderAll();
@@ -798,37 +838,209 @@ editor.addEventListener('scroll', () => { gutter.scrollTop = editor.scrollTop; }
 editor.addEventListener('click', renderCursorInfo);
 editor.addEventListener('keyup', renderCursorInfo);
 
-/* ---------- Resizing the split between source and output ---------- */
+/* ---------- Resizing the split between source and output ----------
+   Guarded: if index.html does not have the #resizer element (an older
+   copy of the file, for example), this block is skipped instead of
+   throwing and stopping every script below it, including loadState()
+   and renderAll() at the bottom of this file. */
 
-let dragging = false;
-let dragStartY = 0;
-let dragStartH = 0;
+if (resizer && editorPane && mainEl) {
+  let dragging = false;
+  let dragStartY = 0;
+  let dragStartH = 0;
 
-resizer.addEventListener('pointerdown', (e) => {
-  dragging = true;
-  dragStartY = e.clientY;
-  dragStartH = editorPane.getBoundingClientRect().height;
-  resizer.setPointerCapture(e.pointerId);
-  resizer.classList.add('dragging');
-  document.body.style.userSelect = 'none';
-});
+  resizer.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    dragStartY = e.clientY;
+    dragStartH = editorPane.getBoundingClientRect().height;
+    resizer.setPointerCapture(e.pointerId);
+    resizer.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+  });
 
-resizer.addEventListener('pointermove', (e) => {
-  if (!dragging) return;
-  const total = mainEl.getBoundingClientRect().height;
-  const minH = 60;
-  const maxH = total - resizer.offsetHeight - 80; // keep at least 80px for the output pane
-  const h = Math.min(maxH, Math.max(minH, dragStartH + (e.clientY - dragStartY)));
-  editorPane.style.flex = `0 0 ${h}px`;
-});
+  resizer.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const total = mainEl.getBoundingClientRect().height;
+    const minH = 60;
+    const maxH = total - resizer.offsetHeight - 80; // keep at least 80px for the output pane
+    const h = Math.min(maxH, Math.max(minH, dragStartH + (e.clientY - dragStartY)));
+    editorPane.style.flex = `0 0 ${h}px`;
+  });
 
-function endDrag() {
-  dragging = false;
-  resizer.classList.remove('dragging');
-  document.body.style.userSelect = '';
+  function endDrag() {
+    dragging = false;
+    resizer.classList.remove('dragging');
+    document.body.style.userSelect = '';
+  }
+  resizer.addEventListener('pointerup', endDrag);
+  resizer.addEventListener('pointercancel', endDrag);
+} else {
+  console.warn('Resizer handle not found — skipping drag-to-resize setup. Make sure index.html and script.js are the same version.');
 }
-resizer.addEventListener('pointerup', endDrag);
-resizer.addEventListener('pointercancel', endDrag);
+
+/* ---------- Theme: background photo + accent color ----------
+   Guarded like the resizer block above: if any of these elements are
+   missing from index.html, this whole block is skipped instead of
+   throwing and stopping loadState() / renderAll() below. */
+
+const THEME_KEY = 'polyglot-notebook-theme';
+const DEFAULT_ACCENT = '#007acc';
+
+const ACCENT_PALETTE = [
+  { hex: '#007acc', name: 'Blue' },
+  { hex: '#4f46e5', name: 'Indigo' },
+  { hex: '#8957e5', name: 'Purple' },
+  { hex: '#d6409f', name: 'Magenta' },
+  { hex: '#e5484d', name: 'Red' },
+  { hex: '#f2994a', name: 'Orange' },
+  { hex: '#f2c94c', name: 'Yellow' },
+  { hex: '#27ae60', name: 'Green' },
+  { hex: '#14b8a6', name: 'Teal' },
+  { hex: '#22d3ee', name: 'Cyan' },
+  { hex: '#fb7185', name: 'Rose' },
+  { hex: '#64748b', name: 'Slate' }
+];
+
+function hexToRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+  if (!m) return { r: 0, g: 122, b: 204 };
+  return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+}
+
+function hexToRgba(hex, alpha) {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+if (btnSettings && settingsPanel && themePhotoInput && btnChoosePhoto &&
+    btnRemovePhoto && photoThumb && colorGrid && customColor && bgPhotoEl && bgOverlayEl) {
+
+  let theme = { accent: DEFAULT_ACCENT, photo: null };
+
+  function loadTheme() {
+    try {
+      const raw = localStorage.getItem(THEME_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          theme = { accent: parsed.accent || DEFAULT_ACCENT, photo: parsed.photo || null };
+        }
+      }
+    } catch (e) {
+      /* localStorage unavailable or data corrupted — stay on the default theme */
+    }
+  }
+
+  function saveTheme() {
+    try {
+      localStorage.setItem(THEME_KEY, JSON.stringify(theme));
+    } catch (e) {
+      // most likely the photo is too large for localStorage's quota (~5–10 MB per origin)
+      alert('Could not save the theme — the image may be too large for this browser to store. The accent color and image still apply to this session, but will not persist after reload.');
+    }
+  }
+
+  function applyTheme() {
+    document.documentElement.style.setProperty('--accent', theme.accent);
+    document.documentElement.style.setProperty('--accent-soft', hexToRgba(theme.accent, 0.14));
+
+    if (theme.photo) {
+      bgPhotoEl.style.backgroundImage = `url("${theme.photo}")`;
+      bgOverlayEl.style.backgroundColor = hexToRgba(theme.accent, 0.38);
+      document.body.classList.add('has-bg-photo');
+      photoThumb.style.backgroundImage = `url("${theme.photo}")`;
+      photoThumb.classList.add('visible');
+    } else {
+      bgPhotoEl.style.backgroundImage = '';
+      bgOverlayEl.style.backgroundColor = 'transparent';
+      document.body.classList.remove('has-bg-photo');
+      photoThumb.style.backgroundImage = '';
+      photoThumb.classList.remove('visible');
+    }
+
+    customColor.value = theme.accent;
+    renderColorGrid();
+  }
+
+  function renderColorGrid() {
+    colorGrid.innerHTML = '';
+    ACCENT_PALETTE.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'color-swatch' + (c.hex.toLowerCase() === theme.accent.toLowerCase() ? ' active' : '');
+      btn.style.background = c.hex;
+      btn.title = c.name;
+      btn.addEventListener('click', () => {
+        theme.accent = c.hex;
+        applyTheme();
+        saveTheme();
+      });
+      colorGrid.appendChild(btn);
+    });
+  }
+
+  function openSettingsPanel() {
+    settingsPanel.classList.add('open');
+  }
+  function closeSettingsPanel() {
+    settingsPanel.classList.remove('open');
+  }
+
+  btnSettings.addEventListener('click', (e) => {
+    e.stopPropagation();
+    settingsPanel.classList.contains('open') ? closeSettingsPanel() : openSettingsPanel();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!settingsPanel.contains(e.target) && e.target !== btnSettings && !btnSettings.contains(e.target)) {
+      closeSettingsPanel();
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeSettingsPanel();
+  });
+
+  btnChoosePhoto.addEventListener('click', () => {
+    themePhotoInput.value = '';
+    themePhotoInput.click();
+  });
+
+  themePhotoInput.addEventListener('change', () => {
+    const file = themePhotoInput.files && themePhotoInput.files[0];
+    if (!file) return;
+    const MAX_BYTES = 4 * 1024 * 1024; // keep comfortably under typical localStorage quotas
+    if (file.size > MAX_BYTES) {
+      alert('That image is too large (over 4 MB). Please choose a smaller photo.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      theme.photo = String(reader.result || '');
+      applyTheme();
+      saveTheme();
+    };
+    reader.onerror = () => {
+      alert('Could not read that image file.');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  btnRemovePhoto.addEventListener('click', () => {
+    theme.photo = null;
+    applyTheme();
+    saveTheme();
+  });
+
+  customColor.addEventListener('input', () => {
+    theme.accent = customColor.value;
+    applyTheme();
+    saveTheme();
+  });
+
+  loadTheme();
+  applyTheme();
+} else {
+  console.warn('Theme settings elements not found — skipping theme setup. Make sure index.html and script.js are the same version.');
+}
 
 /* ---------- Start ---------- */
 

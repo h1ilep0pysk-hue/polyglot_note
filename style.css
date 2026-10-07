@@ -32,7 +32,49 @@ body{
   display:flex;
   flex-direction:column;
   overflow-x:clip;
+  position:relative;
 }
+
+/* ---- background photo + accent tint, always behind the interface ----
+   #bgPhoto and #bgOverlay are fixed to the viewport, below everything
+   (negative z-index), so they never cover any UI element — the titlebar,
+   tabs, panes and statusbar all paint their own backgrounds above them. */
+#bgPhoto{
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  opacity:0;
+  transition:opacity .25s ease;
+  pointer-events:none;
+}
+#bgOverlay{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  background-color:transparent;
+  pointer-events:none;
+  transition:background-color .2s ease;
+}
+body.has-bg-photo #bgPhoto{opacity:1;}
+/* when a photo is set, the app chrome becomes slightly translucent so the
+   photo+tint reads through, but text and controls stay fully legible */
+body.has-bg-photo .titlebar,
+body.has-bg-photo .titlebar-tabs,
+body.has-bg-photo .pane-head,
+body.has-bg-photo .statusbar{backdrop-filter:blur(6px);}
+body.has-bg-photo .titlebar{background:rgba(50,50,51,0.86);}
+body.has-bg-photo .titlebar-tabs{background:rgba(45,45,45,0.86);}
+body.has-bg-photo .tab{background:rgba(45,45,45,0.86);}
+body.has-bg-photo .tab.active{background:rgba(30,30,30,0.92);}
+body.has-bg-photo .pane-head{background:rgba(37,37,38,0.86);}
+body.has-bg-photo #preview{background:rgba(30,30,30,0.82);}
+body.has-bg-photo .editor-wrap{background:rgba(30,30,30,0.86);}
+body.has-bg-photo .gutter{background:rgba(30,30,30,0.86);}
+body.has-bg-photo .console{background:rgba(17,17,17,0.88);}
+body.has-bg-photo .tab-add{background:rgba(45,45,45,0.86);}
 
 /* ---- title bar ---- */
 .titlebar{
@@ -43,6 +85,8 @@ body{
   background:var(--bg-titlebar);
   padding:0 0.9rem;
   flex-shrink:0;
+  position:relative;
+  z-index:30;
 }
 
 .titlebar-left{margin-right:auto;}
@@ -59,6 +103,23 @@ body{
   box-shadow:0 0 6px var(--accent);
 }
 .app-name{letter-spacing:0.02em;}
+
+.titlebar-right{display:flex;align-items:center;gap:0.4rem;}
+.icon-btn{
+  display:flex;align-items:center;justify-content:center;
+  width:26px;height:26px;
+  border:none;
+  border-radius:5px;
+  background:transparent;
+  color:var(--text-dim);
+  cursor:pointer;
+}
+.icon-btn svg{width:15px;height:15px;}
+.icon-btn:hover{background:#3e3e42;color:var(--text-bright);}
+#btnSettings.spin-on-hover:hover svg{transform:rotate(25deg);}
+#btnSettings svg{transition:transform .25s ease;}
+#btnSettings:hover svg{transform:rotate(45deg);}
+
 .titlebar-tabs{
   display:flex;
   height:34px;
@@ -66,6 +127,8 @@ body{
   border-bottom:1px solid var(--border);
   overflow-x:auto;
   flex-shrink:0;
+  position:relative;
+  z-index:20;
 }
 .tab{
   display:flex;
@@ -118,6 +181,113 @@ body{
 }
 .tab-add:hover{color:var(--text-bright);background:#3e3e42;}
 .tab-add svg{width:14px;height:14px;}
+
+/* ---- settings / theme panel (opens from the gear icon) ---- */
+.settings-panel{
+  position:fixed;
+  top:40px;
+  right:10px;
+  z-index:60;
+  width:272px;
+  max-width:calc(100vw - 20px);
+  background:#252526;
+  border:1px solid var(--border);
+  border-radius:8px;
+  box-shadow:0 12px 32px rgba(0,0,0,0.5);
+  padding:0.85rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.9rem;
+  opacity:0;
+  transform:translateY(-6px) scale(0.98);
+  pointer-events:none;
+  transition:opacity .15s ease, transform .15s ease;
+}
+.settings-panel.open{
+  opacity:1;
+  transform:translateY(0) scale(1);
+  pointer-events:auto;
+}
+.settings-panel-head{
+  font-size:0.78rem;
+  font-weight:600;
+  letter-spacing:0.04em;
+  color:var(--text-bright);
+  border-bottom:1px solid var(--border);
+  padding-bottom:0.55rem;
+}
+.settings-section{display:flex;flex-direction:column;gap:0.5rem;}
+.settings-label{
+  font-size:0.68rem;
+  letter-spacing:0.07em;
+  text-transform:uppercase;
+  color:var(--text-dim);
+}
+.settings-photo-row{display:flex;gap:0.5rem;}
+.settings-btn{
+  flex:1;
+  height:28px;
+  border:1px solid var(--border);
+  border-radius:5px;
+  background:#2d2d2d;
+  color:var(--text);
+  font-family:var(--font-ui);
+  font-size:0.74rem;
+  cursor:pointer;
+}
+.settings-btn:hover{background:#3a3a3a;border-color:#4a4a4a;color:var(--text-bright);}
+.settings-btn-ghost{background:transparent;color:var(--text-dim);}
+.settings-btn-ghost:hover{color:#f48771;border-color:#5a1d1d;background:rgba(90,29,29,0.25);}
+
+.settings-photo-thumb{
+  height:0;
+  border-radius:6px;
+  background-size:cover;
+  background-position:center;
+  border:1px solid transparent;
+  overflow:hidden;
+  transition:height .2s ease;
+}
+.settings-photo-thumb.visible{height:84px;border-color:var(--border);}
+
+.color-grid{
+  display:grid;
+  grid-template-columns:repeat(6, 1fr);
+  gap:0.4rem;
+}
+.color-swatch{
+  width:100%;
+  aspect-ratio:1;
+  border-radius:50%;
+  border:2px solid transparent;
+  cursor:pointer;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.12);
+}
+.color-swatch:hover{transform:scale(1.08);}
+.color-swatch.active{
+  border-color:#fff;
+  box-shadow:0 0 0 2px #1e1e1e, 0 0 0 3px var(--accent);
+}
+.settings-custom-color{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:0.74rem;
+  color:var(--text-dim);
+  gap:0.6rem;
+}
+.settings-custom-color input[type="color"]{
+  width:42px;
+  height:24px;
+  padding:0;
+  border:1px solid var(--border);
+  border-radius:4px;
+  background:none;
+  cursor:pointer;
+}
+
+/* крестик закрытия — скрыт, появляется по hover (как в VS Code);
+   на активной вкладке всегда немного виден */
 
 /* контекстное меню по ПКМ на вкладке */
 .context-menu{
@@ -230,6 +400,8 @@ main{
   display:flex;
   flex-direction:column;
   min-height:0;
+  position:relative;
+  z-index:1;
 }
 .pane{
   display:flex;
@@ -394,6 +566,8 @@ textarea{
   color:#fff;
   font-size:0.72rem;
   padding:0 0.9rem;
+  position:relative;
+  z-index:10;
 }
 .status-item{display:flex;align-items:center;gap:0.35rem;}
 .status-dot{width:6px;height:6px;border-radius:50%;background:#89d185;}
@@ -413,6 +587,7 @@ textarea{
   .titlebar-left .app-name{display:none;}
   .pane-head-hint{display:none;}
   .gutter{width:34px;font-size:0.72rem;}
+  .settings-panel{right:6px;left:6px;width:auto;}
 }
 /* ---- draggable splitter between source and output ---- */
 .resizer{
@@ -421,5 +596,7 @@ textarea{
   background:var(--border);
   touch-action:none;
   user-select:none;
+  position:relative;
+  z-index:1;
 }
 .resizer:hover,.resizer.dragging{background:var(--accent);}

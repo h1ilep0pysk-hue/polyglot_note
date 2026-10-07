@@ -1,4 +1,4 @@
-# Poly Notebook
+# Polyglot Notebook
 
 A single-page, browser-only Markdown editor that can also run Python and C++
 code blocks. Everything runs in the browser: there is no backend and no build step.
@@ -9,23 +9,26 @@ code blocks. Everything runs in the browser: there is no backend and no build st
   with line numbers, cursor position, and character count.
 - **Multiple files in tabs.** Create, rename, import, export, and delete files
   from the tab bar. Right-click a tab for the context menu.
-- **Run Python.** `.py` files, or `python` blocks inside a `.md` file, run in
+- **Run Python.** `.py` files, or `python` blocks inside a `.mult` file, run in
   Pyodide (CPython compiled to WebAssembly).
 - **Run C++.** `.cpp`/`.cc`/`.cxx`/`.h`/`.hpp` files, or `cpp` blocks inside a
-  `.md` file, run in JSCPP (a C++ interpreter written in JavaScript).
-- **Mixed notebooks.** A `.md` file with `python` and `cpp` blocks runs as one
+  `.mult` file, run in JSCPP (a C++ interpreter written in JavaScript).
+- **Mixed notebooks.** A `.mult` file with `python` and `cpp` blocks runs as one
   program, top to bottom, and values can be passed between blocks.
 - **Resizable panes.** Drag the splitter between the source and the output.
-- **Persistence.** Files are saved to `localStorage` in your browser.
+- **Custom theme.** Pick an accent color from a palette (or any custom color)
+  and an optional background photo, via the gear icon in the title bar.
+- **Persistence.** Files and the chosen theme are saved to `localStorage` in
+  your browser.
 
 ## Project structure
 
-| File         | Purpose                                                     |
-|--------------|-------------------------------------------------------------|
-| `index.html` | Layout, toolbar, context menu, CDN script tags              |
-| `script.js`  | All logic: file state, Markdown rendering, running code, UI |
-| `style.css`  | Dark, VS Code–style theme and layout                        |
-| `README.md`  | This document                                               |
+| File         | Purpose                                                        |
+|--------------|------------------------------------------------------------------|
+| `index.html` | Layout, toolbar, theme panel, context menu, CDN script tags    |
+| `script.js`  | All logic: file state, Markdown rendering, running code, theme, UI |
+| `style.css`  | Dark, VS Code–style theme and layout                           |
+| `README.md`  | This document                                                  |
 
 External libraries (loaded from CDNs):
 
@@ -38,19 +41,53 @@ External libraries (loaded from CDNs):
 
 1. Open `index.html` in a modern browser (Chrome, Firefox, Edge, Safari).
    Internet access is required for the CDN libraries.
-2. Pick a file from the tab bar. Demo files are `calculator.md`, `note.md`,
+2. Pick a file from the tab bar. Demo files are `calculator.mult`, `note.mult`,
    `hello.py`, and `hello.cpp`.
 3. Click **Run** to execute the file.
 
 No installation is needed. To host it, copy the three files to any static web server.
 
-## How to use a `.md` file
+## Theme: accent color and background photo
+
+Click the **gear icon** (⚙) in the top-right corner of the title bar to open
+the theme panel.
+
+- **Background image.** Click **Choose image** to pick a photo from your
+  device (4 MB max). It becomes a full-screen background behind the whole
+  interface. Click **Remove** to clear it. The photo never covers any part of
+  the UI — the title bar, tabs, panes, and status bar always sit above it, and
+  turn slightly translucent with a blur so the photo shows through without
+  hurting readability.
+- **Accent color.** Pick one of the 12 preset colors in the palette, or use the
+  **Custom** color picker for any hex value. The accent color is used for tab
+  highlights, the Run button, borders, and — when a background photo is set —
+  it is blended as a soft tint over the photo, so the photo and the interface
+  color always match.
+- Click the gear icon again, click outside the panel, or press **Esc** to
+  close it.
+- Both the accent color and the background photo are saved to `localStorage`
+  (key `polyglot-notebook-theme`) and restored automatically on reload. If the
+  chosen photo is too large for the browser to store, the app shows a warning;
+  the theme still applies for the current session, it just will not persist
+  after a reload.
+
+## What `.mult` is
+
+`.mult` is this app's own extension for a notebook file: plain Markdown text
+with `python`, `c`, and `cpp` code blocks that can be run. It is not a
+standard file format outside this app — the content is ordinary Markdown,
+only the extension is custom, so other Markdown tools may not recognize it.
+Plain `.md` files still open and render normally; they are just treated as
+non-runnable unless they also contain `python`, `c`, or `cpp` blocks.
+
+## How to use a `.mult` file
 
 ### Writing
 
 Write regular Markdown. Put code in fenced blocks, using a language name that
 the runner understands:
 
+````markdown
 ```python
 print("hello")
 ```
@@ -64,6 +101,7 @@ int main() {
     return 0;
 }
 ```
+````
 
 Other fence languages are rendered and highlighted but not executed.
 
@@ -102,7 +140,7 @@ Values are substituted as text, so a Python `21.0` becomes `21.0` in the C++ cod
 
 ### Python
 
-Full CPython running in the browser through Pyodide, including the standard library.
+Full CPython 3.12 running in the browser through Pyodide, including the standard library.
 Output via `print` appears in the Output tab. Errors are shown in red.
 The interpreter stays alive between runs in the same page session.
 
@@ -132,28 +170,46 @@ classes, and add `using namespace std;` if you prefer to write `cout` without th
 ## Persistence and resetting
 
 All files and their content are stored in `localStorage` under the key
-`polyglot-notebook-state`. Console output is not saved; it exists only for the
-current page session.
+`polyglot-notebook-state`. The theme (accent color and background photo) is
+stored separately under `polyglot-notebook-theme`. Console output is not
+saved; it exists only for the current page session.
 
-To reset to the demo files, run this in the browser console (F12):
+To reset files to the demo content, run this in the browser console (F12):
 
 ```js
 localStorage.removeItem('polyglot-notebook-state'); location.reload();
 ```
 
-This deletes all of your files in this browser. Export anything you need first.
+To reset the theme back to the default blue accent with no photo:
 
-## Known issues
-  Running the file is not affected. Fix: write `python` and `cpp` without backticks in that line.
-- Existing `localStorage` data is not updated automatically when the demo
-  files change. See *Persistence and resetting*.
+```js
+localStorage.removeItem('polyglot-notebook-theme'); location.reload();
+```
+
+These delete your files or theme in this browser. Export anything you need first.
+
+## Known issues and limits
+
+Fixed:
+
+- The `note.mult` blockquote no longer contains literal triple backticks, so the
+  Markdown preview renders it correctly.
+- Demo files saved in `localStorage` can be brought back to their original content:
+  right-click any tab and choose **Restore demo files**. Your other files are kept.
+
+Limits that are inherent to the design (not bugs):
+
 - Pyodide and JSCPP are loaded from CDNs. If a CDN is blocked, the runtime
-  reports that it could not load.
+  reports that it could not load. Python and C++ then do not run until the CDN is reachable.
 - Code runs in the page with no sandbox beyond the browser's own. Only run code you trust.
+- A background photo is stored as a data URL in `localStorage`, which typically
+  has a 5–10 MB quota per browser origin; very large photos may fail to persist
+  (see above).
 
 ## Keyboard and mouse
 
-- **Tab bar:** click to switch, right-click for Rename / Export / Import / Delete.
+- **Tab bar:** click to switch, right-click for Rename / Export / Import / Restore demo files / Delete.
+- **Gear icon:** opens/closes the theme panel; click outside the panel or press Esc to close it.
 - **Splitter:** drag up or down to resize the source and output panes.
 - **Editor:** tabs are inserted as 4 spaces (`tab-size: 4`); the gutter follows the scroll position.
 
